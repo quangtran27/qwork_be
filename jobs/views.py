@@ -28,11 +28,18 @@ class JobList(APIView):
   def get(self, request):
     jobs = Job.objects.all()
     keyword = request.query_params.get('keyword')
+    city = request.query_params.get('city')
 
     if keyword is not None:
       try:
         jobs = jobs.filter(name__icontains=keyword)
       except Exception as e: 
+        print(e)
+
+    if city is not None and city != '0':
+      try:
+        jobs = jobs.filter(city_code=int(city, base=10))
+      except Exception as e:
         print(e)
 
     return paginate_jobs(jobs, request)

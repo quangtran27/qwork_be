@@ -166,7 +166,7 @@ def request_reset_password(request):
   
   user = User.objects.get(email=email)
   token = PasswordResetTokenGenerator().make_token(user)
-  email_body = f'Xin chào {user.name},\nHãy sử dụng Bạn hãy sử mã này để đặt mật khẩu của mình: {token}'
+  email_body = f'Xin chào {user.name},\nHãy sử dụng mã này để đặt mật khẩu của mình: {token}'
   data = {
     'email_body': email_body,
     'to_email': user.email,

@@ -30,7 +30,6 @@ def register(request):
   if len(User.objects.filter(email=data['email'])) > 0:
     return make_response(False, 400, 'Email đã được sử dụng!')
 
-  # Saving
   password = data.get('password', '')
   data['password'] = make_password(password)
   user_serializer = UserSerializer(data=data)
@@ -38,7 +37,6 @@ def register(request):
     try:
       user: User = user_serializer.save()
 
-      # Tạo hồ sơ
       if user.role == 'recruiter':
         profile = RecruiterProfile(
           user=user, 
