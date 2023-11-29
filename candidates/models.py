@@ -1,6 +1,8 @@
 import uuid
+
 from django.db import models
 
+from jobs.models import Job
 from users.models import User
 from users.validators import PhoneValidator
 
@@ -20,6 +22,11 @@ class CandidateProfile(models.Model):
   gender = models.CharField(choices=GENDER_CHOICES, default='male')
   birth_day = models.DateField(null=True, blank=True)
   email = models.EmailField(max_length=255, unique=True)
+
+  saved_jobs = models.ManyToManyField(Job)
+
+  class Meta:
+    ordering = ['name']
 
   def __str__(self) -> str:
     return self.user.name

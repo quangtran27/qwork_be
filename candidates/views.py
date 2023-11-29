@@ -9,11 +9,13 @@ from rest_framework.response import Response
 
 from candidates.models import CandidateProfile
 from candidates.serializers import CandidateProfileSerializer
+from jobs.serializers import JobDetailSerializer
 from users.models import User
 from utils.api_response import make_response
 from utils.firebase import delete_file
 from utils.sample_data import SERVER_ERROR_RESPONSE
 from utils.token import check_auth, decode_token
+from utils.validators import is_valid_uuid
 
 
 @api_view(['POST'])
@@ -164,3 +166,5 @@ def update_avatar(request, id) -> Response:
   delete_file(old_avatar)
 
   return make_response(True, 200, 'Cập nhật avatar thành công!', profile.avatar)
+
+  

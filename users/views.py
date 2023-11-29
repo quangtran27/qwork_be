@@ -8,6 +8,8 @@ from rest_framework.response import Response
 from applications.serialziers import ApplicationDetailSerializer
 from candidates.models import CandidateProfile
 from candidates.serializers import CandidateProfileSerializer
+from jobs.models import Job
+from jobs.serializers import JobDetailSerializer
 from recruiters.models import RecruiterProfile
 from recruiters.serializers import RecruiterProfileSerializer
 from users.models import User
@@ -114,3 +116,40 @@ def get_user_applications(request, id) -> Response:
   applications = user.application_set.all()
 
   return make_response(True, 200, '', ApplicationDetailSerializer(applications, many=True).data)
+
+@api_view(['GET', 'PATCH'])
+def get_or_update_user_saved_jobs(request, id):
+  if not is_valid_uuid(id):
+    return make_response(False, 404, 'Người dùng không tồn tại')
+  try:
+    user = User.objects.get(id=id)
+  except CandidateProfile.DoesNotExist:
+    return make_response(False, 404, 'Hồ sơ người dùng không tồn tại')
+  
+  if not user.role == 'candidate':
+    return make_response(False, 404, 'Nhà tuyển dụng không có quyền truy cập')
+  
+  if request.method == 'GET':
+    return make_response(True, 200, '', JobDetailSerializer(user.candidateprofile.saved_jobs, many=True).data)
+  
+  try:
+    job = Job.objects.get(id=request.data.get('job_id'))
+  except:
+    return make_response(False, 404, 'Công việc không tồn tại')
+
+  action = request.data.get('action', 'add')
+  if action not in ['add', 'remove']:
+    return make_response(False, 200, 'Hành động không xác định')
+
+  profile: CandidateProfile = user.candidateprofile
+  
+  if action == 'add':
+    profile.saved_jobs.add(job)
+    profile.save()
+    return make_response(True, 200, 'Lưu tin tuyển dụng thành công', JobDetailSerializer(profile.saved_jobs, many=True).data)
+  else: # remove
+    profile.saved_jobs.remove(job)
+    profile.save()
+    return make_response(True, 200, 'Bỏ lưu tin tuyển dụng thành công', JobDetailSerializer(profile.saved_jobs, many=True).data)
+  
+  

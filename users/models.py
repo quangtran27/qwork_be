@@ -65,5 +65,8 @@ class User(AbstractUser):
 
   objects = CustomUserManager()
 
+  class Meta:
+    ordering = ['email']
+
   def __str__(self) -> str:
     return self.email
