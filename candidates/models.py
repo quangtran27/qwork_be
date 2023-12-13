@@ -15,7 +15,7 @@ class CandidateProfile(models.Model):
   user = models.OneToOneField(to=User, on_delete=models.CASCADE)
   avatar = models.URLField(null=True, blank=True, default=None)
   name = models.CharField(max_length=255)
-  description = models.TextField()
+  description = models.TextField(blank=True)
   phone = models.CharField(max_length=20, unique=True, validators=[phone_validator])
   address = models.CharField(max_length=255)
   position = models.CharField(max_length=255)
@@ -23,7 +23,7 @@ class CandidateProfile(models.Model):
   birth_day = models.DateField(null=True, blank=True)
   email = models.EmailField(max_length=255, unique=True)
 
-  saved_jobs = models.ManyToManyField(Job)
+  saved_jobs = models.ManyToManyField(Job, blank=True)
 
   class Meta:
     ordering = ['name']

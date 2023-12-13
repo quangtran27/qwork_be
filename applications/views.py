@@ -34,13 +34,14 @@ def create_application(request) -> Response:
   if datetime(job.expired.year, job.expired.month, job.expired.day) <= datetime.now():
     return make_response(False, 400, 'Tin tuyển dụng đã hết hạn!')
   
-  files = request.FILES
-  if files is None or 'cv' not in files:
-    return make_response(False, 400, 'Chưa có thông tin CV')
-  cv = files['cv']
-
-  if cv.name.split('.')[1] not in ['doc', 'docx', 'pdf']:
-    return make_response(False, 400, 'CV chưa đúng định dạng, chỉ châp nhận .doc, .docx và pdf')
+  old_cv = request.data.get('old_cv')
+  if old_cv is None:
+    files = request.FILES
+    if files is None or 'cv' not in files:
+      return make_response(False, 400, 'Chưa có thông tin CV')
+    cv = files['cv']
+    if cv.name.split('.')[1] not in ['doc', 'docx', 'pdf']:
+      return make_response(False, 400, 'CV chưa đúng định dạng, chỉ châp nhận .doc, .docx và pdf')
 
   data['cv'] = None
   serializer = ApplicationSerializer(data=data)
@@ -52,16 +53,18 @@ def create_application(request) -> Response:
   else:
     return make_response(False, 400, 'Thông tin không hợp lệ, vui lòng kiểm tra lại')
   
-  bucket = storage.bucket()
-  cv_filename = str(datetime.now().timestamp()) + os.path.basename(cv.name)
-  blob = bucket.blob(f'cv/{application.id}/' + cv_filename)
-  blob.upload_from_file(cv, content_type=cv.content_type)
-  blob.make_public()
+  if old_cv is not None:
+    application.cv = old_cv
+  else:
+    bucket = storage.bucket()
+    timestamp = str(datetime.now().timestamp())
+    blob = bucket.blob(f'cv/{timestamp}/{os.path.basename(cv.name)}')
+    blob.upload_from_file(cv, content_type=cv.content_type)
+    blob.make_public()
+    application.cv = blob.public_url
 
-  application.cv = blob.public_url
   application.job = job
   application.save()
-
   return make_response(True, 201, 'Ứng tuyển thành công!', ApplicationSerializer(application).data)
   
 

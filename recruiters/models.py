@@ -14,7 +14,7 @@ class RecruiterProfile(models.Model):
   avatar = models.URLField(blank=True, null=True)
   background = models.URLField(blank=True, null=True, default=None)
   name = models.CharField(max_length=255)
-  description = models.TextField()
+  description = models.TextField(blank=True)
   phone = models.CharField(max_length=20, unique=True, validators=[phone_validator])
   email = models.EmailField(max_length=255, unique=True)
   address = models.CharField(max_length=255)

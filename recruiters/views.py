@@ -40,7 +40,6 @@ class RecruiterList(APIView):
 
     return paginate_profiles(profiles, request)
 
-
 @api_view(['GET'])
 def get_all_recruiter_profiles(request):
   profiles = RecruiterProfile.objects.all()
@@ -152,8 +151,35 @@ def get_recruiters_jobs(request, id) -> Response:
     return make_response(False, 404, 'Nhà tuyển dụng không tồn tại')
 
   jobs = recruiter.user.job_set.all()
+  keyword = request.query_params.get('keyword')
+  city = request.query_params.get('city')
+
+  if keyword is not None:
+    try:
+      jobs = jobs.filter(name__icontains=keyword)
+    except Exception as e: 
+      print(e)
+
+  if city is not None and city != '0':
+    try:
+      jobs = jobs.filter(city_code=int(city, base=10))
+    except Exception as e:
+      print(e)
+  
   data = JobDetailSerializer(jobs, many=True).data
   for index, job in enumerate(jobs):
     data[index]['applications'] = ApplicationDetailSerializer(job.application_set.all(), many=True).data
+  
+  try:
+    paginator = CustomPageNumberPagination()
+    paginator.page_size = 6
+    result_page = paginator.paginate_queryset(jobs, request)
+    
+    data = JobDetailSerializer(result_page, many=True).data
+    for index, job in enumerate(result_page):
+      data[index]['applications'] = ApplicationDetailSerializer(job.application_set.all(), many=True).data
 
-  return make_response(True, 200, '', data)
+    return paginator.get_paginated_response(data=data)
+  
+  except:
+    return make_response(True, 200, '', data)

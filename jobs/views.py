@@ -26,7 +26,7 @@ def paginate_jobs(jobs, request):
 
 class JobList(APIView):
   def get(self, request):
-    jobs = Job.objects.all()
+    jobs = Job.objects.filter(status=True)
     keyword = request.query_params.get('keyword')
     city = request.query_params.get('city')
 

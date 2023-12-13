@@ -12,5 +12,14 @@ class UserSerializer(serializers.ModelSerializer):
       'phone',
       'email',
       'password',
-      'role'
+      'role',
+      'is_active',
+    )
+
+class UserInfoSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = User
+    fields = (
+      'name',
+      'phone',
     )

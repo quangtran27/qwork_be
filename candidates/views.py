@@ -1,3 +1,4 @@
+from email import message
 import os
 from datetime import datetime
 
@@ -128,8 +129,16 @@ def get_or_update_candidate_profile(request, id) -> Response:
       print('Error saving candidate profile:', e)
       return SERVER_ERROR_RESPONSE
   else:
+    message = 'Thông tin không hợp lệ, vui lòng kiểm tra lại'
+
+    errors = serializer._errors
+    if 'phone' in errors and any(detail.code == 'unique' for detail in errors['phone']):
+      message = 'Số điện thoại đã được sử dụng'
+    if 'email' in errors and any(detail.code == 'unique' for detail in errors['email']):
+      message = 'Email đã được sử dụng'
+        
     print(serializer._errors)
-    return make_response(False, 400, 'Thông tin không hợp lệ, vui lòng kiểm tra lại')
+    return make_response(False, 400, message)
 
 
 @api_view(['PUT'])

@@ -1,11 +1,12 @@
 from uuid import UUID
 
 from django.contrib.auth.hashers import make_password
-from requests import Request
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from applications.serialziers import ApplicationDetailSerializer
+from authentication.utils import Util
 from candidates.models import CandidateProfile
 from candidates.serializers import CandidateProfileSerializer
 from jobs.models import Job
@@ -13,10 +14,10 @@ from jobs.serializers import JobDetailSerializer
 from recruiters.models import RecruiterProfile
 from recruiters.serializers import RecruiterProfileSerializer
 from users.models import User
-from users.serializers import UserSerializer
+from users.serializers import UserInfoSerializer, UserSerializer
 from utils.api_response import make_response
 from utils.sample_data import SERVER_ERROR_RESPONSE
-from utils.token import check_auth, check_permissions
+from utils.token import check_auth
 from utils.validators import is_valid_uuid
 
 
@@ -24,7 +25,7 @@ from utils.validators import is_valid_uuid
 def register(request):
   data = request.data
 
-  # Validations
+  # Validate
   if data['role'] not in ['recruiter', 'candidate']:
     return make_response(False, 400, 'Loại tài khoản không hợp lệ!')
   if len(User.objects.filter(phone=data['phone'])) > 0:
@@ -38,13 +39,24 @@ def register(request):
   if user_serializer.is_valid():
     try:
       user: User = user_serializer.save()
+      user.is_active = False
+      user.save()
+
+      origin = request.headers['Origin']
+      token = PasswordResetTokenGenerator().make_token(user)
+      email_data = {
+        'to_email': user.email,
+        'email_subject': 'Kích hoạt tài khoản QWork',
+        'email_body': f'Xin chào {user.name},\nBạn hãy sử dụng đường link này để kích hoạt tài khoản của bạn trên QWork: {origin}/active/{user.email}/{token}'
+      }
+      Util.send_email(email_data)
 
       if user.role == 'recruiter':
         profile = RecruiterProfile(
           user=user, 
           avatar=None, 
           name=user.name, 
-          description='Cập nhật mô tả', 
+          description='', 
           phone=user.phone, 
           email=user.email, 
           address='Cập nhật địa chỉ'
@@ -55,7 +67,7 @@ def register(request):
           avatar=None, 
           name=user.name, 
           phone=user.phone, 
-          description='Cập nhật mô tả', 
+          description='', 
           address='Cập nhật địa chỉ',
           position='Cập nhật vị trí trong công việc',
           gender='male',
@@ -66,7 +78,7 @@ def register(request):
       profile.save()
 
       user.password = ''
-      return make_response(True, 201, 'Đăng ký thành công!', UserSerializer(user).data)
+      return make_response(True, 201, 'Đăng ký tài khoản thành công!', UserSerializer(user).data)
     except Exception as e:
       print('Error saving user from register: ', e)
       return SERVER_ERROR_RESPONSE
@@ -123,7 +135,7 @@ def get_or_update_user_saved_jobs(request, id):
     return make_response(False, 404, 'Người dùng không tồn tại')
   try:
     user = User.objects.get(id=id)
-  except CandidateProfile.DoesNotExist:
+  except User.DoesNotExist:
     return make_response(False, 404, 'Hồ sơ người dùng không tồn tại')
   
   if not user.role == 'candidate':
@@ -152,4 +164,93 @@ def get_or_update_user_saved_jobs(request, id):
     profile.save()
     return make_response(True, 200, 'Bỏ lưu tin tuyển dụng thành công', JobDetailSerializer(profile.saved_jobs, many=True).data)
   
+@api_view(['PATCH'])
+def update_user_info(request, id):
+  if not is_valid_uuid(id):
+    return make_response(False, 404, 'Người dùng không tồn tại')
+
+  [is_authenticated, decoded_token, messagge] = check_auth(request)
+  if not is_authenticated:
+    return make_response(False, 401, messagge)
   
+  try:
+    user = User.objects.get(id=id)
+  except User.DoesNotExist:
+    return make_response(False, 404, 'Hồ sơ người dùng không tồn tại')
+  
+  if decoded_token['user_id'] != str(user.id):
+    return make_response(False, 403, 'Tài khoản không có quyền cập nhật thông tin người dùng')
+
+  serializer = UserInfoSerializer(user, data=request.data, partial=True)
+  if serializer.is_valid():
+    user = serializer.save()
+    user.password = ''
+    return make_response(True, 200, 'Cập nhật hành công!', UserSerializer(user).data)
+  else:
+    message = 'Thông tin không hợp lệ, vui lòng kiểm tra lại'
+    if serializer._errors['phone'] is not None:
+      message = 'Số điện thoại đã được sử dụng'
+    return make_response(False, 400, message)
+
+@api_view(['PATCH'])
+def active_user(request, email, token):
+  try:
+    user = User.objects.get(email=email)
+    if user.is_active:
+      return make_response(False, 400, 'Tài khoản đã được kích hoạt trước đó')
+    
+    if PasswordResetTokenGenerator().check_token(user, token):
+      user.is_active = True
+      user.save()
+      return make_response(True, 200, 'Kích hoạt tài khoản thành công!')
+    return make_response(False, 400, 'Mã kích hoạt không hợp lệ')
+
+  except User.DoesNotExist:
+    return make_response(False, 404, 'Hồ sơ người dùng không tồn tại')
+
+@api_view()
+def get_user_application_cvs(request, id):
+  if not is_valid_uuid(id):
+    return make_response(False, 404, 'Người dùng không tồn tại')
+
+  [is_authenticated, decoded_token, messagge] = check_auth(request)
+  if not is_authenticated:
+    return make_response(False, 401, messagge)
+  
+  try:
+    user = User.objects.get(id=id)
+  except User.DoesNotExist:
+    return make_response(False, 404, 'Hồ sơ người dùng không tồn tại')
+  
+  if str(user.id) != decoded_token['user_id']:
+    return make_response(False, 403, 'Bạn không có quyền truy cập')
+
+  applications = user.application_set.all()
+  cvs = []
+  for application in applications:
+    cvs.append(application.cv)
+
+  return make_response(True, 200, data=cvs)
+  
+@api_view(['GET'])
+def send_email_active(request, email):
+  try:
+    user = User.objects.get(email=email)
+  except:
+    return make_response(False, 404, 'Tài khoản không tồn tại')
+
+  if user.is_active:
+    return make_response(False, 400, 'Tài khoản đã được kích hoạt trước đó')
+
+  origin = request.headers['Origin']
+  token = PasswordResetTokenGenerator().make_token(user)
+  email_data = {
+    'to_email': user.email,
+    'email_subject': 'Kích hoạt tài khoản QWork',
+    'email_body': f'Xin chào {user.name},\nBạn hãy sử dụng đường link này để kích hoạt tài khoản của bạn trên QWork: {origin}/active/{user.email}/{token}'
+  }
+  try:
+    Util.send_email(email_data)
+    return make_response(True, 200, f'Đã gửi email kích hoạt tài khoản đến {user.email}')
+  except:
+    return make_response(False, 200, 'Đã xảy ra lỗi')

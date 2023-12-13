@@ -19,6 +19,7 @@ class ApplicationDetailSerializer(serializers.ModelSerializer):
   candidate_avatar = serializers.URLField(source='user.candidateprofile.avatar')
   candidate_user_id = serializers.CharField(source='user.id')
   candidate_name = serializers.CharField(source='user.candidateprofile.name')
+  candidate_position = serializers.CharField(source='user.candidateprofile.position')
   
   def get_created(self, obj: Application):
     return obj.created.__format__('%d/%m/%Y %H:%M')
@@ -42,6 +43,7 @@ class ApplicationDetailSerializer(serializers.ModelSerializer):
       'candidate_avatar',
       'candidate_user_id',
       'candidate_name',
+      'candidate_position',
       'name',
       'phone',
       'cv',

@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.utils import timezone
 
 from jobs.models import Job
 from users.models import User
@@ -17,8 +18,8 @@ class Application(models.Model):
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
   job = models.ForeignKey(to=Job, on_delete=models.SET_NULL, null=True)
   user = models.ForeignKey(to=User, on_delete=models.SET_NULL, null=True)
-  created = models.DateTimeField(auto_now_add=True)
-  updated = models.DateTimeField(auto_now=True)
+  created = models.DateTimeField(auto_now_add=timezone.now)
+  updated = models.DateTimeField(auto_now=timezone.now)
   name = models.CharField(max_length=255)
   email = models.EmailField(max_length=255)
   phone = models.CharField(max_length=20, validators=[PhoneValidator])
