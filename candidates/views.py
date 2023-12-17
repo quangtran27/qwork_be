@@ -1,91 +1,53 @@
-from email import message
 import os
 from datetime import datetime
+from uu import Error
+from zoneinfo import available_timezones
 
 from firebase_admin import storage
-from requests import Request
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from candidates.models import CandidateProfile
 from candidates.serializers import CandidateProfileSerializer
-from jobs.serializers import JobDetailSerializer
+from recruiters.models import RecruiterProfile
 from users.models import User
 from utils.api_response import make_response
 from utils.firebase import delete_file
+from utils.pagination import CustomPageNumberPagination
 from utils.sample_data import SERVER_ERROR_RESPONSE
 from utils.token import check_auth, decode_token
-from utils.validators import is_valid_uuid
+from django.db.models import Q
 
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def create_candidate_profile(request) -> Response:
-  authorization = request.headers['Authorization']
-  if not authorization or not authorization.startswith('Bearer '):
-    return make_response(False, 401, 'Thông tin xác thực không hợp lệ')
+@api_view(['GET'])
+def get_all_profiles(request):
+  [is_authenticated, decoded_token, messagge] = check_auth(request)
+  if not is_authenticated:
+    return make_response(False, 401, messagge)
   
-  token = authorization.split(' ')[1] if len(authorization.split(' ')) > 1 else ''
-  decoded_token = decode_token(token)
-  if not decode_token or decoded_token['exp'] < datetime.now().timestamp():
-    return make_response(False, 401, 'Token đã hết hạn')
-  
-  user_id = decoded_token['user_id']
   try:
-    user = User.objects.get(id=user_id)
+    user = User.objects.get(id=decoded_token['user_id'])
+    if user.role != 'recruiter':
+      raise Exception('Tài khoản không có quyền truy cập')
   except:
-    return make_response(False, 404, 'Người dùng không tồn tại')
-  
-  if user.role != 'candidate':
-    return make_response(False, 403, 'Bạn không có quyền tạo mới hồ sơ ứng cử viên')
+    return make_response(False, 403, 'Tài khoản không có quyền truy cập')
 
-  name = request.data.get('name', None)
-  phone = request.data.get('phone', None)
-  description = request.data.get('description', None)
-  address = request.data.get('address', None)
-  position = request.data.get('position', None)
-  gender = request.data.get('gender', None)
-  email = request.data.get('email', None)
-  birth_day = request.data.get('birthDay', None)
-  
-  files = request.FILES
-  if files is None or 'avatar' not in files:
-    return make_response(False, 400, 'Chưa có thông tin ảnh đại diện')
-  avatar = files['avatar'] 
-    
-  candidate_profile_serializer = CandidateProfileSerializer(data={
-    'user': user.id,
-    'name': name,
-    'phone': phone,
-    'description': description,
-    'address': address,
-    'position': position,
-    'gender': gender,
-    'email': email,
-    'birth_day': birth_day,
-  })
-  if candidate_profile_serializer.is_valid():
+  profiles = CandidateProfile.objects.filter(available=True, user__is_active=True)
+  keyword = request.query_params.get('keyword')
+
+  if keyword is not None:
     try:
-      candidate_profile = candidate_profile_serializer.save()
+      profiles = profiles.filter(Q(description__icontains=keyword) | Q(name__icontains=keyword) | Q(position__icontains=keyword))
     except Exception as e:
-      print('Error saving candidate profile:', e)
-      return SERVER_ERROR_RESPONSE
-    
-    # Sau khi lưu thông tin hồ sơ ứng cử viên thành công, tiến hành lưu avatar lên firebase
-    bucket = storage.bucket()
-    avatar_filename = str(datetime.now().timestamp()) + os.path.basename(avatar.name)
-    blob = bucket.blob('images/candidate_profile/' + avatar_filename)
-    blob.upload_from_file(avatar, content_type=avatar.content_type)
-    blob.make_public()
+      print(e)
 
-    candidate_profile.avatar = blob.public_url
-    candidate_profile.save()
+  try:
+    paginator = CustomPageNumberPagination()
+    result_page = paginator.paginate_queryset(profiles, request)
+    return paginator.get_paginated_response(data=CandidateProfileSerializer(result_page, many=True).data)
+  except:
+    return make_response(False, 200, '', [])
+  
 
-    return make_response(True, 201, 'Tạo hồ sơ ứng cử viên thành công!', CandidateProfileSerializer(candidate_profile).data)
-  else:
-    print(candidate_profile_serializer._errors)
-    return make_response(False, 400, 'Thông tin không hợp lệ, vui lòng kiểm tra lại')
 
 @api_view(['GET', 'PUT'])
 def get_or_update_candidate_profile(request, id) -> Response:

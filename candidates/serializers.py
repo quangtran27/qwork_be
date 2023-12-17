@@ -18,4 +18,5 @@ class CandidateProfileSerializer(serializers.ModelSerializer):
       'gender',
       'birth_day',
       'email',
+      'available'
     )

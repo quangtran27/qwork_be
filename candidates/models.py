@@ -22,6 +22,7 @@ class CandidateProfile(models.Model):
   gender = models.CharField(choices=GENDER_CHOICES, default='male')
   birth_day = models.DateField(null=True, blank=True)
   email = models.EmailField(max_length=255, unique=True)
+  available = models.BooleanField(default=False)
 
   saved_jobs = models.ManyToManyField(Job, blank=True)
 

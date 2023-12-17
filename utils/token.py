@@ -22,7 +22,10 @@ def check_auth(request):
   authorization = request.headers.get('Authorization', '')
   if not authorization or not authorization.startswith('Bearer'):
     return [False, None, 'Thông tin xác thực không hợp lệ']
-  token = authorization.split(' ')[1]
+  try:
+    token = authorization.split(' ')[1]
+  except:
+    return [False, None, 'Thông tin xác thực không hợp lệ']
   decoded_token = decode_token(token)
   if not decode_token or decoded_token['exp'] < datetime.now().timestamp():
     return [False, None, 'Token đã hết hạn']
