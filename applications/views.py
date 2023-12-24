@@ -67,7 +67,6 @@ def create_application(request) -> Response:
   application.save()
   return make_response(True, 201, 'Ứng tuyển thành công!', ApplicationSerializer(application).data)
   
-
 @api_view(['GET', 'PUT', 'DELETE'])
 def get_or_update_or_delete_application(request, id):
   [is_authenticated, decoded_token, message] = check_auth(request)

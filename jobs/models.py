@@ -20,7 +20,7 @@ class Job(models.Model):
   status = models.BooleanField(default=True)
 
   class Meta:
-    ordering = ['-expired']
+    ordering = ['-created']
 
   def __str__(self) -> str:
     return self.name

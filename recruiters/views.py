@@ -42,7 +42,7 @@ class RecruiterList(APIView):
 
 @api_view(['GET'])
 def get_all_recruiter_profiles(request):
-  profiles = RecruiterProfile.objects.all()
+  profiles = RecruiterProfile.objects.all().order_by('-created')
   return paginate_profiles(profiles, request)
 
 @api_view(['GET', 'PUT'])
@@ -137,7 +137,7 @@ def update_background(request, id) -> Response:
   
 @api_view(['GET'])
 def get_outstanding_recruiters(request) -> Response:
-  recruiters = RecruiterProfile.objects.all()[:8]
+  recruiters = RecruiterProfile.objects.all()[:6]
   return make_response(True, 200, data=RecruiterProfileSerializer(recruiters, many=True).data)
 
 @api_view(['GET'])

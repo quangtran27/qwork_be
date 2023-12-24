@@ -25,6 +25,10 @@ class Application(models.Model):
   phone = models.CharField(max_length=20, validators=[PhoneValidator])
   cv = models.URLField(max_length=1000, null=True, blank=True, default=None)
   status = models.IntegerField(choices=APPLICATION_STATUS_CHOICES, default=1)
+  note = models.TextField(blank=True, default='')
 
   def __str__(self) -> str:
     return f'{self.user.name if self.user.name else ""} - {(self.job.name if self.job else "")}'
+  
+  class Meta:
+    ordering = ['-created']

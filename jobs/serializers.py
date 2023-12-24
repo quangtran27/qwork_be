@@ -35,6 +35,7 @@ class JobDetailSerializer(serializers.ModelSerializer):
       'salary_from',
       'salary_to',
       'updated',
+      'created',
       'expired',
       'status',
     )

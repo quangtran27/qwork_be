@@ -3,6 +3,7 @@ from uuid import UUID
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from datetime import datetime
 
 from applications.serialziers import ApplicationDetailSerializer
 from jobs import middleware
@@ -22,7 +23,6 @@ def paginate_jobs(jobs, request):
     return paginator.get_paginated_response(data=JobDetailSerializer(result_page, many=True).data)
   except:
     return make_response(False, 200, '', [])
-
 
 class JobList(APIView):
   def get(self, request):
@@ -52,8 +52,20 @@ class JobList(APIView):
     if not check_permissions(decoded_token['user_id'], ['recruiter']):
       return make_response(False, 403, 'Bạn không có quyền tạo mới tin tuyển dụng!')
 
-    request = middleware.middleware(request)
-    
+    # expired = request.data['expired']
+    # is_expired_valid = True
+    # if expired is None: is_expired_valid = False
+    # else:
+    #   try:
+    #     date_object = datetime.strptime(expired, '%Y-%m-%d')
+    #     if date_object > datetime.now():
+    #       is_expired_valid = False
+    #   except:
+    #     return make_response(False, 400, 'Thông tin ngày hết hạn không đúng định dạng')
+
+    # if not is_expired_valid:
+    #   return make_response(False, 400, 'Thông tin ngày hết hạn không hợp lệ')
+
     request.data['user']= decoded_token['user_id']
     serializer = JobSerializer(data=request.data)
     if serializer.is_valid():
@@ -66,7 +78,6 @@ class JobList(APIView):
     else:
       print(serializer._errors)
       return make_response(False, 400, 'Thông tin không hợp lệ')
-
 
 @api_view(['GET', 'POST'])
 def get_all_or_create_job(request) -> Response:

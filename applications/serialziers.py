@@ -48,6 +48,7 @@ class ApplicationDetailSerializer(serializers.ModelSerializer):
       'phone',
       'cv',
       'status',
+      'note',
     )
 
     
