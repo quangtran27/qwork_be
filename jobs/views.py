@@ -3,10 +3,8 @@ from uuid import UUID
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from datetime import datetime
 
 from applications.serialziers import ApplicationDetailSerializer
-from jobs import middleware
 from jobs.models import Job
 from jobs.serializers import JobDetailSerializer, JobSerializer
 from utils.api_response import make_response

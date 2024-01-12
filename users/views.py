@@ -125,7 +125,12 @@ def get_user_applications(request, id) -> Response:
   if not user.role == 'candidate' or str(decoded_token['user_id']) != str(user.id):
     return make_response(False, 403, 'Bạn không có quyền tạo mới đơn ứng tuyển')
 
+  status = request.query_params.get('status')
+
   applications = user.application_set.all()
+
+  if status is not None and status != '0':
+    applications = applications.filter(status=status)
 
   return make_response(True, 200, '', ApplicationDetailSerializer(applications, many=True).data)
 

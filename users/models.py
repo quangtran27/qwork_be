@@ -58,7 +58,7 @@ class User(AbstractUser):
   email = models.EmailField(max_length=255, unique=True)
   phone = models.CharField(max_length=20, unique=True, validators=[PhoneValidator])
   name = models.CharField(max_length=255)
-  role = models.CharField(choices=USER_ROLE_CHOICES, default='4')
+  role = models.CharField(choices=USER_ROLE_CHOICES, default='candidate')
   
   USERNAME_FIELD = 'email'
   REQUIRED_FIELDS = []
